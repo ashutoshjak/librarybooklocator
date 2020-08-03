@@ -1,7 +1,12 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:librarybooklocator/singinup/loginpage.dart';
 import 'package:librarybooklocator/singinup/pages/constants.dart';
+import 'package:librarybooklocator/singinup/network_utils/api.dart';
+import 'package:librarybooklocator/singinup/pages/homepage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+
 
 class Signup extends StatefulWidget {
   @override
@@ -9,10 +14,13 @@ class Signup extends StatefulWidget {
 }
 
 class _SignupState extends State<Signup> {
-  String _email, _password;
+  bool _isLoading = false;
+  final _formKey = GlobalKey<FormState>();
+  var email;
+  var password;
   String error='';
 
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +45,7 @@ class _SignupState extends State<Signup> {
                     return 'Provide email';
                   }
                 },
-                onSaved: (input) => _email = input,
+                onSaved: (input) => email = input,
                 decoration: textInputDecoration.copyWith(hintText: 'Email'),
               ),
               SizedBox(height: 20.0),
@@ -47,13 +55,17 @@ class _SignupState extends State<Signup> {
                     return 'Please long password ';
                   }
                 },
-                onSaved: (input) => _password = input,
+                onSaved: (input) => password = input,
                 decoration: textInputDecoration.copyWith(hintText: 'Password'),
                 obscureText: true,
               ),
               SizedBox(height: 20.0),
               RaisedButton(
-                onPressed: signUp,
+                onPressed: () {
+                  if (_formKey.currentState.validate()) {
+                    _register();
+                  }
+                },
                 color: Colors.brown[300],
                 child: Text(
                   'Signup',
@@ -72,21 +84,32 @@ class _SignupState extends State<Signup> {
     );
   }
 
-  void signUp() async {
-    final formState = _formKey.currentState;
-    if (formState.validate()) {
-      formState.save();
-      try {
-        AuthResult result = (await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(
-                email: _email, password: _password));
-        FirebaseUser user =result.user;
-        user.sendEmailVerification();
-        //Navigator.of(context).pop();
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>LoginPage(),fullscreenDialog: true));
-      } catch (e) {
-        print(e.message);
-      }
+  void _register()async{
+    setState(() {
+      _isLoading = true;
+    });
+    var data = {
+      'email' : email,
+      'password': password,
+
+    };
+
+    var res = await Network().authData(data, '/register');
+    var body = json.decode(res.body);
+    if(body['success']){
+      SharedPreferences localStorage = await SharedPreferences.getInstance();
+      localStorage.setString('token', json.encode(body['token']));
+      localStorage.setString('user', json.encode(body['user']));
+      Navigator.push(
+        context,
+        new MaterialPageRoute(
+            builder: (context) => HomePage()
+        ),
+      );
     }
+
+    setState(() {
+      _isLoading = false;
+    });
   }
 }

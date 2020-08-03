@@ -1,24 +1,18 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:librarybooklocator/singinup/pages/constants.dart';
-import 'package:librarybooklocator/singinup/pages/signout.dart';
-
+import 'package:librarybooklocator/singinup/network_utils/api.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../welcome.dart';
 import 'modal.dart';
+
+
 class HomePage extends StatefulWidget {
   @override
   _HomePageState createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
- // FirebaseAuth auth = FirebaseAuth.instance;
-
-  /*getUID() async {
-    final FirebaseUser user = await auth.currentUser();
-    final uid = user.uid;
-    return  uid;
-  }*/
-  //final AuthService _auth = AuthService();
   @override
   Widget build(BuildContext context) {
     Modal modal = new Modal();
@@ -33,8 +27,8 @@ class _HomePageState extends State<HomePage> {
             FlatButton.icon(
               icon: Icon(Icons.person,color: Colors.white,),
               label: Text('logout',style: TextStyle(color: Colors.white),),
-              onPressed: () async{
-          //      await _auth.signOut();
+              onPressed: () {
+                logout();
               },
             ),
           ],
@@ -67,4 +61,19 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  void logout() async{
+    var res = await Network().getData('/logout');
+    var body = json.decode(res.body);
+    if(body['success']){
+      SharedPreferences localStorage = await SharedPreferences.getInstance();
+      localStorage.remove('user');
+      localStorage.remove('token');
+      Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context)=>Welcome()));
+    }
+  }
 }
+
+
